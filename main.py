@@ -159,40 +159,40 @@ async def webhook_elementor(
             status_code=200,
         )
 
-    client = get_ads_client()
-
-    click_conversion = client.get_type("ClickConversion")
-    click_conversion.conversion_action = client.get_service(
-        "ConversionActionService"
-    ).conversion_action_path(CUSTOMER_ID, CONVERSION_ACTION_ID)
-
-    if gclid:
-        click_conversion.gclid = gclid
-    elif wbraid:
-        click_conversion.wbraid = wbraid
-    elif gbraid:
-        click_conversion.gbraid = gbraid
-
-    click_conversion.conversion_date_time = datetime.now(timezone.utc).strftime(
-        "%Y-%m-%d %H:%M:%S+00:00"
-    )
-    click_conversion.conversion_value = DEFAULT_CONVERSION_VALUE
-    click_conversion.currency_code = DEFAULT_CURRENCY
-
-    # Enhanced Conversions for Leads — datos hasheados SHA-256
-    if email:
-        ui = client.get_type("UserIdentifier")
-        ui.hashed_email = sha256_norm(email)
-        click_conversion.user_identifiers.append(ui)
-    if phone:
-        normalized = normalize_phone(phone)
-        if normalized:
-            ui = client.get_type("UserIdentifier")
-            ui.hashed_phone_number = sha256_norm(normalized)
-            click_conversion.user_identifiers.append(ui)
-
-    upload_service = client.get_service("ConversionUploadService")
     try:
+        client = get_ads_client()
+
+        click_conversion = client.get_type("ClickConversion")
+        click_conversion.conversion_action = client.get_service(
+            "ConversionActionService"
+        ).conversion_action_path(CUSTOMER_ID, CONVERSION_ACTION_ID)
+
+        if gclid:
+            click_conversion.gclid = gclid
+        elif wbraid:
+            click_conversion.wbraid = wbraid
+        elif gbraid:
+            click_conversion.gbraid = gbraid
+
+        click_conversion.conversion_date_time = datetime.now(timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%S+00:00"
+        )
+        click_conversion.conversion_value = DEFAULT_CONVERSION_VALUE
+        click_conversion.currency_code = DEFAULT_CURRENCY
+
+        # Enhanced Conversions for Leads — datos hasheados SHA-256
+        if email:
+            ui = client.get_type("UserIdentifier")
+            ui.hashed_email = sha256_norm(email)
+            click_conversion.user_identifiers.append(ui)
+        if phone:
+            normalized = normalize_phone(phone)
+            if normalized:
+                ui = client.get_type("UserIdentifier")
+                ui.hashed_phone_number = sha256_norm(normalized)
+                click_conversion.user_identifiers.append(ui)
+
+        upload_service = client.get_service("ConversionUploadService")
         response = upload_service.upload_click_conversions(
             customer_id=CUSTOMER_ID,
             conversions=[click_conversion],
@@ -201,9 +201,9 @@ async def webhook_elementor(
     except Exception as e:
         # No devolvemos 5xx para que Elementor no reintente.
         # Devolvemos 200 con detalle del error para diagnóstico.
-        log.exception("Google Ads upload failed")
+        log.exception("Upload pipeline failed")
         return JSONResponse(
-            {"status": "error", "error": str(e)[:500]},
+            {"status": "error", "error": f"{type(e).__name__}: {str(e)[:500]}"},
             status_code=200,
         )
 
