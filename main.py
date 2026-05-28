@@ -149,12 +149,13 @@ async def webhook_elementor(
     name = pick_field(fields, "name", "nombre")
 
     has_click_id = bool(gclid or wbraid or gbraid)
-    has_user_id = bool(email or phone)
 
-    if not has_click_id and not has_user_id:
-        log.info("Submit sin gclid ni datos de contacto → no se sube nada")
+    if not has_click_id:
+        # ClickConversion requiere obligatoriamente uno de gclid/wbraid/gbraid.
+        # Sin él no podemos atribuir → skip y registrar (no es error).
+        log.info("Submit sin click_id (visita orgánica/directa) → skip")
         return JSONResponse(
-            {"status": "skipped", "reason": "no gclid/wbraid/gbraid nor email/phone"},
+            {"status": "skipped", "reason": "no gclid/wbraid/gbraid"},
             status_code=200,
         )
 
@@ -198,8 +199,13 @@ async def webhook_elementor(
             partial_failure=True,
         )
     except Exception as e:
+        # No devolvemos 5xx para que Elementor no reintente.
+        # Devolvemos 200 con detalle del error para diagnóstico.
         log.exception("Google Ads upload failed")
-        raise HTTPException(status_code=502, detail=f"Ads API error: {e}")
+        return JSONResponse(
+            {"status": "error", "error": str(e)[:500]},
+            status_code=200,
+        )
 
     # Partial failure check
     if response.partial_failure_error and response.partial_failure_error.message:
