@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import re
+from collections import deque
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -35,6 +36,12 @@ DEFAULT_CURRENCY = os.environ.get("CONVERSION_CURRENCY", "EUR")
 app = FastAPI(title="IM webhook")
 
 _ads_client: GoogleAdsClient | None = None
+_recent_requests: deque = deque(maxlen=20)
+
+
+def record_request(entry: dict) -> None:
+    entry["ts"] = datetime.now(timezone.utc).isoformat()
+    _recent_requests.appendleft(entry)
 
 
 def get_ads_client() -> GoogleAdsClient:
@@ -113,6 +120,13 @@ async def healthz():
     return {"status": "ok"}
 
 
+@app.get("/debug/recent")
+async def debug_recent(secret: str | None = None):
+    if secret != SHARED_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return {"count": len(_recent_requests), "items": list(_recent_requests)}
+
+
 @app.post("/webhook/elementor")
 async def webhook_elementor(
     request: Request,
@@ -141,6 +155,13 @@ async def webhook_elementor(
     fields = parse_elementor_payload(raw)
     log.info("Webhook received fields=%s", list(fields.keys()))
 
+    # Snapshot para /debug/recent (no PII completo, sólo claves + flags)
+    debug_entry = {
+        "field_keys": list(fields.keys()),
+        "form_name": (raw.get("form") or {}).get("name") if isinstance(raw.get("form"), dict) else None,
+        "content_type": content_type,
+    }
+
     gclid = pick_field(fields, "gclid")
     wbraid = pick_field(fields, "wbraid")
     gbraid = pick_field(fields, "gbraid")
@@ -149,11 +170,21 @@ async def webhook_elementor(
     name = pick_field(fields, "name", "nombre")
 
     has_click_id = bool(gclid or wbraid or gbraid)
+    debug_entry.update({
+        "has_gclid": bool(gclid),
+        "has_wbraid": bool(wbraid),
+        "has_gbraid": bool(gbraid),
+        "has_email": bool(email),
+        "has_phone": bool(phone),
+        "gclid_prefix": (gclid[:12] + "...") if gclid else None,
+    })
 
     if not has_click_id:
         # ClickConversion requiere obligatoriamente uno de gclid/wbraid/gbraid.
         # Sin él no podemos atribuir → skip y registrar (no es error).
         log.info("Submit sin click_id (visita orgánica/directa) → skip")
+        debug_entry["status"] = "skipped:no_click_id"
+        record_request(debug_entry)
         return JSONResponse(
             {"status": "skipped", "reason": "no gclid/wbraid/gbraid"},
             status_code=200,
@@ -202,6 +233,9 @@ async def webhook_elementor(
         # No devolvemos 5xx para que Elementor no reintente.
         # Devolvemos 200 con detalle del error para diagnóstico.
         log.exception("Upload pipeline failed")
+        debug_entry["status"] = f"error:{type(e).__name__}"
+        debug_entry["error"] = str(e)[:300]
+        record_request(debug_entry)
         return JSONResponse(
             {"status": "error", "error": f"{type(e).__name__}: {str(e)[:500]}"},
             status_code=200,
@@ -210,6 +244,9 @@ async def webhook_elementor(
     # Partial failure check
     if response.partial_failure_error and response.partial_failure_error.message:
         log.error("Partial failure: %s", response.partial_failure_error.message)
+        debug_entry["status"] = "partial_failure"
+        debug_entry["error"] = response.partial_failure_error.message[:300]
+        record_request(debug_entry)
         return JSONResponse(
             {
                 "status": "partial_failure",
@@ -229,4 +266,6 @@ async def webhook_elementor(
         "conversion_action": CONVERSION_ACTION_ID,
     }
     log.info("Upload OK: %s", json.dumps(result_summary))
+    debug_entry["status"] = "ok"
+    record_request(debug_entry)
     return result_summary
