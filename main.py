@@ -116,10 +116,13 @@ async def healthz():
 @app.post("/webhook/elementor")
 async def webhook_elementor(
     request: Request,
+    secret: str | None = None,
     x_webhook_secret: str | None = Header(default=None, alias="X-Webhook-Secret"),
 ):
-    # Auth
-    if x_webhook_secret != SHARED_SECRET:
+    # Auth: aceptamos secret por query string (Elementor Webhook no permite headers custom)
+    # o por header X-Webhook-Secret (curl/testing).
+    provided = secret or x_webhook_secret
+    if provided != SHARED_SECRET:
         log.warning("Forbidden: bad or missing secret")
         raise HTTPException(status_code=403, detail="Forbidden")
 
