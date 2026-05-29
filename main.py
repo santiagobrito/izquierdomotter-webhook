@@ -166,7 +166,7 @@ async def webhook_elementor(
     wbraid = pick_field(fields, "wbraid")
     gbraid = pick_field(fields, "gbraid")
     email = pick_field(fields, "email", "correo", "tu correo electrónico")
-    phone = pick_field(fields, "phone", "telefono", "teléfono", "tel")
+    phone = pick_field(fields, "phone", "telefono", "teléfono", "tel", "field_eb54700")
     name = pick_field(fields, "name", "nombre")
 
     has_click_id = bool(gclid or wbraid or gbraid)
