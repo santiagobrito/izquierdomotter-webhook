@@ -1,0 +1,77 @@
+SNIPPET PARA PEGAR EN: GTM (GTM-P24M67C) → Tags → New → Custom HTML
+====================================================================
+
+Tag Name (copiar tal cual):
+---------------------------
+Capture GCLID Cookie
+
+
+Tag Type:
+---------
+Custom HTML
+
+
+HTML (copiar TODO el bloque de abajo entre las líneas ===):
+-----------------------------------------------------------
+SÍ incluye las etiquetas <script> y </script> — pégalo todo, GTM espera HTML completo.
+
+========= INICIO HTML =========
+<script>
+(function() {
+  function getParam(name) {
+    var u = new URL(window.location.href);
+    return u.searchParams.get(name);
+  }
+  function setCookie(name, value, days) {
+    var d = new Date();
+    d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = name + "=" + value + ";expires=" + d.toUTCString() + ";path=/;SameSite=Lax;Secure";
+  }
+  function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+  }
+  ["gclid", "wbraid", "gbraid"].forEach(function(key) {
+    var v = getParam(key);
+    if (v) setCookie(key, v, 90);
+  });
+  // Rellena hidden fields del form Elementor con el valor de la cookie
+  function fillHidden() {
+    ["gclid", "wbraid", "gbraid"].forEach(function(key) {
+      var v = getCookie(key);
+      if (!v) return;
+      document.querySelectorAll('input[name="form_fields[' + key + ']"]').forEach(function(el) {
+        el.value = v;
+      });
+    });
+  }
+  if (document.readyState !== "loading") {
+    fillHidden();
+  } else {
+    document.addEventListener("DOMContentLoaded", fillHidden);
+  }
+})();
+</script>
+========= FIN HTML =========
+
+
+Trigger:
+--------
+All Pages (es el built-in trigger por defecto — sólo seleccionarlo)
+
+
+Pasos detallados:
+-----------------
+1. Abrir https://tagmanager.google.com  → workspace de IM (container GTM-P24M67C).
+2. Tags → New.
+3. Tag Name: Capture GCLID Cookie
+4. Tag Configuration → click → Custom HTML → pega el bloque HTML de arriba.
+5. Triggering → click → All Pages.
+6. Save.
+7. Botón "Submit" (arriba derecha) → publicar el container. Le pone versión nueva y la activa en producción.
+
+Verificación:
+-------------
+Después de publicar, en navegador privado abrir:
+  https://izquierdomotter.com/venta-de-despachos/?gclid=test_real_001
+Luego DevTools → Application → Cookies → ver "gclid" con valor "test_real_001".

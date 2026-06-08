@@ -1,0 +1,58 @@
+SNIPPET PARA PEGAR EN: wp-admin → Snippets → Add New
+====================================================
+
+Title (copiar tal cual):
+------------------------
+IM Ads fan-out (Elementor → webhook)
+
+
+Description (opcional, copiar tal cual si quieres):
+---------------------------------------------------
+Reenvía submits del form 'Form servicios 2026' al webhook server-side que sube ClickConversion + Enhanced Conversions a Google Ads. No toca el webhook de Zoho.
+
+
+Code (copiar TODO el bloque de abajo entre las líneas ===):
+-----------------------------------------------------------
+NO incluyas la etiqueta <?php — Code Snippets ya la provee internamente.
+
+========= INICIO CÓDIGO =========
+/**
+ * Fan-out: enviar copia de los submits de "Form servicios 2026" al webhook
+ * server-side que sube ClickConversion + Enhanced Conversions a Google Ads.
+ * No interfiere con el webhook de Zoho configurado en el form.
+ */
+add_action( 'elementor_pro/forms/new_record', function( $record, $handler ) {
+    $form_name = $record->get_form_settings( 'form_name' );
+    if ( $form_name !== 'Form servicios 2026' ) {
+        return;
+    }
+
+    $raw_fields = $record->get( 'fields' );
+    $fields = array();
+    foreach ( $raw_fields as $id => $field ) {
+        $fields[ $id ] = isset( $field['value'] ) ? $field['value'] : '';
+    }
+
+    $payload = array(
+        'form'   => array( 'name' => $form_name ),
+        'fields' => $fields,
+    );
+
+    wp_remote_post(
+        'https://izquierdomotter-webhook.a7lflv.easypanel.host/webhook/elementor?secret=jwt7nfUjbSdcdT1xuk7YddOmbU9TIg2kL4r0qis70-U',
+        array(
+            'body'     => wp_json_encode( $payload ),
+            'headers'  => array( 'Content-Type' => 'application/json' ),
+            'timeout'  => 5,
+            'blocking' => false,
+        )
+    );
+}, 10, 2 );
+========= FIN CÓDIGO =========
+
+
+Configuración del snippet:
+--------------------------
+- Scope: Run snippet everywhere  (es el default, no cambiar)
+- Priority: 10                    (es el default)
+- Save Changes and Activate       (botón verde abajo — debe quedar el switch en ON)

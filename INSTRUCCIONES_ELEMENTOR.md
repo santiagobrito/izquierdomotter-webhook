@@ -71,11 +71,12 @@ En el mismo widget del Form:
   - **Webhook URL**: `https://izquierdomotter-webhook.a7lflv.easypanel.host/webhook/elementor`
   - **Advanced Data**: ON (para que mande también metadata del form).
 
-Elementor Pro por defecto NO permite añadir headers custom. Por eso el secret lo enviaremos como **query string** en la URL:
+Elementor Pro por defecto NO permite añadir headers custom. Por eso el secret va como **query string** en la URL:
 
-→ URL final: `https://izquierdomotter-webhook.a7lflv.easypanel.host/webhook/elementor?secret=ABCDEF123456`
-
-(El secret exacto te lo paso una vez deployado el servicio.)
+→ URL final (copiar tal cual):
+```
+https://izquierdomotter-webhook.a7lflv.easypanel.host/webhook/elementor?secret=jwt7nfUjbSdcdT1xuk7YddOmbU9TIg2kL4r0qis70-U
+```
 
 ### 2.3 Guardar y publicar
 
