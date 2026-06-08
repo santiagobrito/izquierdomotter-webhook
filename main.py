@@ -5,7 +5,9 @@ Flujo:
   Form Elementor → POST /webhook/elementor → Google Ads ClickConversionUpload
                                           + Enhanced Conversions for Leads (email/phone hashed)
 
-Conversion action de destino: (web) generate_lead — id 6603919625
+Conversion action de destino: (web) generate_lead - server-side — id 7640082390
+  (UPLOAD_CLICKS, dedicada al webhook; la antigua 6603919625 era GA4_GENERATE_LEAD
+   y rechazaba uploads). La conv GA4 sigue contando submits client-side aparte.
 Cuenta Ads: 7379203565 (Izquierdo Motter, bajo MCC 3295205058)
 """
 
@@ -28,7 +30,7 @@ logging.basicConfig(
 log = logging.getLogger("webhook")
 
 CUSTOMER_ID = "7379203565"
-CONVERSION_ACTION_ID = "6603919625"
+CONVERSION_ACTION_ID = "7640082390"
 SHARED_SECRET = os.environ["WEBHOOK_SECRET"]
 DEFAULT_CONVERSION_VALUE = float(os.environ.get("CONVERSION_VALUE", "1.0"))
 DEFAULT_CURRENCY = os.environ.get("CONVERSION_CURRENCY", "EUR")
